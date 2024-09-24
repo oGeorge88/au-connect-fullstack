@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "./AuthContext"; // Import AuthContext
-import "react-quill/dist/quill.snow.css"; // Import ReactQuill styles
+import "quill/dist/quill.snow.css"; // Correct path for Quill styles
+import Image from "next/image"; // Import Image from next/image
 
 // Dynamically import ReactQuill (client-side only)
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
@@ -22,34 +23,33 @@ const modules = {
 export default function HomePage() {
   const { isLoggedIn, role, userId } = useAuth(); // Get role and userId from AuthContext
   const [announcements, setAnnouncements] = useState([]);
-  const [filteredAnnouncements, setFilteredAnnouncements] = useState([]); // Define filteredAnnouncements
+  const [filteredAnnouncements, setFilteredAnnouncements] = useState([]);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "" });
-  const [coverImage, setCoverImage] = useState(null); // For cover image upload
+  const [coverImage, setCoverImage] = useState(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); // State for loading indication
-  const [error, setError] = useState(""); // State for capturing any errors
-  const [searchTerm, setSearchTerm] = useState(""); // State for search input
-  const [sortOption, setSortOption] = useState("newest"); // State for sorting
-
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOption, setSortOption] = useState("newest");
+  
   // Pagination states
-  const [currentPage, setCurrentPage] = useState(1); // Current page
-  const [itemsPerPage] = useState(21); // Items per page for desktop
-  const [isMobile, setIsMobile] = useState(false); // Mobile device detection
-  const [loadMoreCount, setLoadMoreCount] = useState(6); // Number of items to load on mobile
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(21);
+  const [isMobile, setIsMobile] = useState(false);
+  const [loadMoreCount, setLoadMoreCount] = useState(6);
 
   // Fetch announcements from backend
   useEffect(() => {
     fetchAnnouncements();
-    handleResize(); // Check initial screen size
-    window.addEventListener("resize", handleResize); // Add listener for window resize
+    handleResize();
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener("resize", handleResize); // Cleanup listener
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
   useEffect(() => {
-    // Filter and sort announcements based on search term and sort option
     let updatedAnnouncements = announcements.filter((announcement) =>
       announcement.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -75,7 +75,7 @@ export default function HomePage() {
       }
       const data = await response.json();
       setAnnouncements(data);
-      setFilteredAnnouncements(data); // Initially, filtered announcements are the same
+      setFilteredAnnouncements(data);
     } catch (error) {
       console.error("Error fetching announcements:", error);
       setError("Failed to load announcements. Please try again later.");
@@ -89,11 +89,11 @@ export default function HomePage() {
 
   // Add or edit announcement (Admin Only)
   const handleSaveAnnouncement = async () => {
-    setIsLoading(true); // Indicate loading state
-    setError(""); // Clear any previous errors
+    setIsLoading(true);
+    setError("");
 
     try {
-      const formData = new FormData(); // Use FormData for file upload
+      const formData = new FormData();
       formData.append("title", newAnnouncement.title);
       formData.append("content", newAnnouncement.content);
       if (coverImage) {
@@ -107,7 +107,7 @@ export default function HomePage() {
 
       const response = await fetch(url, {
         method,
-        body: formData, // Send FormData with the request
+        body: formData,
       });
 
       if (!response.ok) {
@@ -124,16 +124,15 @@ export default function HomePage() {
         }
       });
 
-      // Reset the form and fetch the updated list
       setNewAnnouncement({ title: "", content: "" });
       setCoverImage(null);
       setEditingAnnouncement(null);
-      fetchAnnouncements(); // Fetch updated announcements after adding/editing
+      fetchAnnouncements();
     } catch (error) {
       console.error("Error saving announcement:", error);
       setError("Error saving announcement. Please try again.");
     } finally {
-      setIsLoading(false); // End loading state
+      setIsLoading(false);
     }
   };
 
@@ -150,11 +149,7 @@ export default function HomePage() {
   // Detect mobile device
   const handleResize = () => {
     if (typeof window !== "undefined") {
-      if (window.innerWidth <= 768) {
-        setIsMobile(true);
-      } else {
-        setIsMobile(false);
-      }
+      setIsMobile(window.innerWidth <= 768);
     }
   };
 
@@ -244,148 +239,71 @@ export default function HomePage() {
         </select>
       </div>
 
-      {/* Announcement List */}
-      <h2 className="text-4xl font-semibold mb-6">Latest Announcements</h2>
-      {filteredAnnouncements.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {isMobile
-            ? filteredAnnouncements.slice(0, loadMoreCount).map((announcement) => (
-                <AnnouncementCard
-                  key={announcement._id}
-                  announcement={announcement}
-                  handleDeleteAnnouncement={handleDeleteAnnouncement}
-                  role={role}
-                  userId={userId}
-                  setEditingAnnouncement={setEditingAnnouncement}
-                  setNewAnnouncement={setNewAnnouncement}
-                  isLoggedIn={isLoggedIn}
-                />
-              ))
-            : currentItems.map((announcement) => (
-                <AnnouncementCard
-                  key={announcement._id}
-                  announcement={announcement}
-                  handleDeleteAnnouncement={handleDeleteAnnouncement}
-                  role={role}
-                  userId={userId}
-                  setEditingAnnouncement={setEditingAnnouncement}
-                  setNewAnnouncement={setNewAnnouncement}
-                  isLoggedIn={isLoggedIn}
-                />
-              ))}
-        </div>
-      ) : (
-        <p className="text-lg font-medium text-gray-500 text-center">No announcements available.</p>
-      )}
+      {/* Announcement Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {currentItems.map((announcement) => (
+          <div key={announcement._id} className="bg-white shadow-lg rounded-lg p-4">
+            <h3 className="text-2xl font-bold">{announcement.title}</h3>
+            {announcement.coverImage && (
+              <Image
+                src={announcement.coverImage}
+                alt={announcement.title}
+                width={500}
+                height={300}
+                className="mb-4 rounded"
+              />
+            )}
+            <div
+              className="mb-4"
+              dangerouslySetInnerHTML={{ __html: announcement.content }}
+            />
+            <p className="text-gray-500 text-sm">{new Date(announcement.createdAt).toLocaleDateString()}</p>
 
-      {/* Pagination or Load More */}
-      <div className="mt-8 flex justify-center">
-        {isMobile ? (
-          loadMoreCount < filteredAnnouncements.length && (
-            <button
-              className="px-6 py-3 bg-blue-500 text-white font-bold rounded"
-              onClick={handleLoadMore}
-            >
-              Load More
-            </button>
-          )
-        ) : (
-          <Pagination
-            totalPages={totalPages}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AnnouncementCard({
-  announcement,
-  handleDeleteAnnouncement,
-  role,
-  userId,
-  setEditingAnnouncement,
-  setNewAnnouncement,
-  isLoggedIn,
-}) {
-  return (
-    <div
-      key={announcement._id}
-      className="bg-white shadow-lg rounded-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl"
-    >
-      {/* Display the cover image if it exists */}
-      {announcement.coverImage && (
-        <div className="relative overflow-hidden rounded-t-lg">
-          <img
-            src={`http://localhost:5000${announcement.coverImage}`}
-            alt={announcement.title}
-            className="w-full h-50 object-cover"
-          />
-        </div>
-      )}
-
-      <div className="p-6 flex-grow">
-        <h3 className="text-2xl font-bold text-gray-800 mb-3">{announcement.title}</h3>
-        <div
-          className="text-gray-700 mb-4"
-          dangerouslySetInnerHTML={{ __html: announcement.content }}
-        />
-        <p className="text-sm text-gray-500">
-          Posted on: {new Date(announcement.createdAt).toLocaleDateString()}
-        </p>
-      </div>
-
-      <div className="p-4 flex items-center justify-between bg-gray-100">
-        {/* Admin Controls: Edit/Delete */}
-        {role === "admin" && (
-          <div className="flex space-x-4">
-            <button
-              onClick={() => {
-                setEditingAnnouncement(announcement);
-                setNewAnnouncement({
-                  title: announcement.title,
-                  content: announcement.content,
-                });
-              }}
-              className="py-2 px-4 bg-green-500 hover:bg-green-700 text-white font-bold rounded"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDeleteAnnouncement(announcement._id)}
-              className="py-2 px-4 bg-red-500 hover:bg-red-700 text-white font-bold rounded"
-            >
-              Delete
-            </button>
+            {role === "admin" && (
+              <div className="flex justify-between mt-4">
+                <button
+                  onClick={() => {
+                    setEditingAnnouncement(announcement);
+                    setNewAnnouncement({ title: announcement.title, content: announcement.content });
+                  }}
+                  className="text-blue-500 hover:underline"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteAnnouncement(announcement._id)}
+                  className="text-red-500 hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        ))}
       </div>
-    </div>
-  );
-}
 
-function Pagination({ totalPages, currentPage, setCurrentPage }) {
-  const pageNumbers = [];
-
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
-  }
-
-  return (
-    <div className="flex space-x-2">
-      {pageNumbers.map((number) => (
+      {/* Load More Button */}
+      {isMobile && loadMoreCount < filteredAnnouncements.length && (
         <button
-          key={number}
-          onClick={() => setCurrentPage(number)}
-          className={`py-2 px-4 font-bold rounded ${
-            currentPage === number ? "bg-blue-500 text-white" : "bg-gray-300 text-gray-800"
-          }`}
+          onClick={handleLoadMore}
+          className="w-full py-3 text-xl font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow mb-6"
         >
-          {number}
+          Load More
         </button>
-      ))}
+      )}
+
+      {/* Pagination */}
+      <div className="flex justify-center mb-4">
+        {[...Array(totalPages)].map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentPage(index + 1)}
+            className={`px-4 py-2 mx-1 text-white rounded ${currentPage === index + 1 ? "bg-blue-600" : "bg-gray-500"}`}
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

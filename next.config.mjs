@@ -1,29 +1,18 @@
 /** @type {import('next').NextConfig} */
-
 const nextConfig = {
-  // Rewrites for proxying API requests
   async rewrites() {
+    // Use server-side environment variable, not NEXT_PUBLIC_ prefixed one
+    const apiUrl = process.env.API_URL || 'http://localhost:3000/api';  // Fallback to local API if undefined
+    console.log("API_URL:", apiUrl); // Log API URL for debugging
+
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`, // Proxy to API
+        destination: `${apiUrl}/:path*`,  // Use API_URL in rewrites
       },
     ];
   },
-
-  // Enable instrumentation hook for performance tracking
-  experimental: {
-    instrumentationHook: true,
-  },
-
-  // Optionally enable React Strict Mode and SWC minification
-  reactStrictMode: true, // Helps detect potential issues in development
-  swcMinify: true,       // Faster build times with SWC minification
-
-  // Ensure API URL is set (optional validation)
-  publicRuntimeConfig: {
-    apiUrl: process.env.NEXT_PUBLIC_API_URL,
-  },
+  // Other configurations (if needed)
 };
 
 export default nextConfig;

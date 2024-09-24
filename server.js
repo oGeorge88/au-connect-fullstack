@@ -1,4 +1,8 @@
-require('dotenv').config();
+// Load environment variables from .env.development if in development mode
+const path = require('path');
+const dotenvFile = process.env.NODE_ENV === 'development' ? '.env.development' : '.env';
+require('dotenv').config({ path: path.resolve(__dirname, dotenvFile) });
+
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
@@ -29,6 +33,7 @@ app.prepare().then(() => {
     }));
 
     // MongoDB Connection
+    console.log('Connecting to MongoDB:', process.env.MONGODB_URI); // Log the MongoDB URI for debugging
     mongoose.connect(process.env.MONGODB_URI)
         .then(() => console.log('MongoDB Connected'))
         .catch((err) => console.error('MongoDB Connection Error:', err));

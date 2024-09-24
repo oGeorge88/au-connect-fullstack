@@ -2,44 +2,40 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../AuthContext'; // Ensure correct import path for AuthContext
+import { useAuth } from '../AuthContext';
 import Link from 'next/link';
 
 const LoginPage = () => {
-  const [usernameOrEmail, setUsernameOrEmail] = useState(''); // Username or email input field
-  const [password, setPassword] = useState(''); // Password input field
-  const [error, setError] = useState(''); // Error message state
-  const [loading, setLoading] = useState(false); // Loading state
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();  // AuthContext login method
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Send login request to the backend
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ usernameOrEmail, password }), // Send both usernameOrEmail and password
+        body: JSON.stringify({ usernameOrEmail, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Login successful, call the AuthContext login
         login({ role: data.role, userId: data.userId });
-
         window.alert(`Login successful! Welcome ${data.role === 'admin' ? 'Admin' : 'User'}.`);
 
-        // Redirect based on role
         if (data.role === 'admin') {
-          router.push('/admin/dashboard');  // Admin page
+          router.push('/admin/dashboard');
         } else {
-          router.push('/');  // Regular user home page
+          router.push('/');
         }
       } else {
         setError(data.message || 'Login failed. Please check your credentials.');
@@ -87,33 +83,29 @@ const LoginPage = () => {
           className="w-full py-2 px-4 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 flex justify-center items-center"
           disabled={loading}
         >
-          {loading ? (
-            <>
-              <svg
-                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                ></path>
-              </svg>
-              Logging in...
-            </>
-          ) : (
-            'Log In'
+          {loading && (
+            <svg
+              className="animate-spin h-5 w-5 mr-3 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
+            </svg>
           )}
+          {loading ? 'Logging in...' : 'Log In'}
         </button>
 
         <p className="mt-4 text-center">

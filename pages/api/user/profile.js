@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const express = require('express');
-const User = require('../models/User');
-const { isAuthenticated } = require('../middlewares/auth');
+const User = require('../../../models/User'); // Correct path to your User model
+const { isAuthenticated } = require('../../../middlewares/auth'); // Correct path to your auth middleware
 const router = express.Router();
 
 // View user profile (Session-based authentication)
@@ -57,7 +57,7 @@ router.put('/profile', isAuthenticated, async (req, res) => {
 
     await user.save();
     const updatedUser = await User.findById(req.session.userId).select('-password');
-    
+
     res.json({ message: 'Profile updated successfully', user: updatedUser });
   } catch (error) {
     console.error('Error updating profile:', error);

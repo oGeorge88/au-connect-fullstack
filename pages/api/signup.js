@@ -1,6 +1,6 @@
-const bcrypt = require('bcrypt');
-const User = require('../../models/User');  // Ensure correct path to the User model
-const connectDB = require('../../utils/connectDB');  // Ensure database connection
+import bcrypt from 'bcrypt';
+import User from '../../models/User';  // Ensure correct path to the User model
+import connectDB from '../../utils/connectDB';  // Ensure database connection
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -8,6 +8,9 @@ export default async function handler(req, res) {
   }
 
   const { displayName, username, email, password, faculty, gender, studentId } = req.body;
+
+  // Log the incoming request for debugging purposes
+  console.log("Signup Request:", req.body);
 
   if (!username || !email || !password) {
     return res.status(400).json({ message: 'Username, email, and password are required' });
@@ -46,7 +49,7 @@ export default async function handler(req, res) {
       message: 'Signup successful!',
     });
   } catch (error) {
-    console.error('Signup error:', error);  // This will show the error details in your server logs
+    console.error('Signup error:', error);  // Log error details
     return res.status(500).json({ message: 'Server error. Please try again later.' });
   }
 }
