@@ -31,8 +31,8 @@ router.post('/users', isAuthenticated, isAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Email or username already exists' });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash the password with a secure round
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create a new user
     const user = new User({
@@ -78,7 +78,7 @@ router.put('/users/:id', isAuthenticated, isAdmin, async (req, res) => {
 
     // If password is provided, hash and update it
     if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password, 12);
       user.password = hashedPassword;
     }
 

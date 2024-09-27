@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 
+// Load environment variables (if necessary)
+import dotenv from 'dotenv';
+dotenv.config();
+
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -21,6 +25,8 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      useNewUrlParser: true,  // Optional: Use the new URL parser
+      useUnifiedTopology: true, // Optional: Use the new Server Discover and Monitoring engine
     };
 
     console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI);
@@ -32,7 +38,7 @@ async function connectDB() {
       })
       .catch(err => {
         console.error('MongoDB connection error:', err);
-        throw err;
+        throw new Error(`Failed to connect to MongoDB: ${err.message}`);
       });
   }
 
@@ -40,7 +46,7 @@ async function connectDB() {
     cached.conn = await cached.promise;
   } catch (error) {
     cached.promise = null;
-    throw error;
+    throw error; // Propagate the error for handling at a higher level
   }
 
   return cached.conn;

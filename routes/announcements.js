@@ -8,7 +8,7 @@ const { isAuthenticated, isAdmin } = require('../middlewares/auth'); // Middlewa
 // Multer storage setup for cover images
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Save uploaded files to 'uploads/' directory
+    cb(null, 'uploads/'); // Save uploaded files to 'uploads/' directory (might need to change for production)
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname)); // Name files with timestamp + extension
@@ -19,6 +19,16 @@ const upload = multer({
   storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // Limit file size to 10 MB
+  },
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|gif/;
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimeType = fileTypes.test(file.mimetype);
+    if (extname && mimeType) {
+      return cb(null, true);
+    } else {
+      cb('Error: Images only!'); // Restrict uploads to image files only
+    }
   },
 });
 
@@ -36,14 +46,14 @@ router.post('/create', isAuthenticated, isAdmin, upload.single('coverImage'), as
       title,
       content,
       coverImage: coverImagePath,
-      createdBy: req.session.userId,
+      createdBy: req.session.userId, // Assumes session management is properly set up
     });
 
     await newAnnouncement.save();
     res.status(201).json(newAnnouncement);
   } catch (error) {
     console.error('Error creating announcement:', error);
-    res.status(500).json({ message: 'Error creating announcement' });
+    res.status(500).json({ message: 'Error creating announcement', error: error.message });
   }
 });
 
@@ -75,7 +85,7 @@ router.put('/edit/:id', isAuthenticated, isAdmin, upload.single('coverImage'), a
     res.status(200).json(updatedAnnouncement);
   } catch (error) {
     console.error('Error editing announcement:', error);
-    res.status(500).json({ message: 'Error editing announcement' });
+    res.status(500).json({ message: 'Error editing announcement', error: error.message });
   }
 });
 
@@ -86,7 +96,7 @@ router.get('/', async (req, res) => {
     res.status(200).json(announcements);
   } catch (error) {
     console.error('Error fetching announcements:', error);
-    res.status(500).json({ message: 'Error fetching announcements' });
+    res.status(500).json({ message: 'Error fetching announcements', error: error.message });
   }
 });
 
@@ -102,7 +112,7 @@ router.delete('/delete/:id', isAuthenticated, isAdmin, async (req, res) => {
     res.status(200).json({ message: 'Announcement deleted successfully' });
   } catch (error) {
     console.error('Error deleting announcement:', error);
-    res.status(500).json({ message: 'Error deleting announcement' });
+    res.status(500).json({ message: 'Error deleting announcement', error: error.message });
   }
 });
 

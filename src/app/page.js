@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import Link from 'next/link';
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "./AuthContext"; // Import AuthContext
 import "quill/dist/quill.snow.css"; // Correct path for Quill styles
-import Image from "next/image"; // Import Image from next/image
 
 // Dynamically import ReactQuill (client-side only)
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
@@ -20,290 +20,214 @@ const modules = {
   ],
 };
 
-export default function HomePage() {
-  const { isLoggedIn, role, userId } = useAuth(); // Get role and userId from AuthContext
-  const [announcements, setAnnouncements] = useState([]);
-  const [filteredAnnouncements, setFilteredAnnouncements] = useState([]);
+// Sample data for demonstration purposes
+const sampleAnnouncements = [
+  { id: 1, title: "Welcome to AU Connect", description: "Join our platform to connect with fellow students!" },
+  { id: 2, title: "Upcoming Event: Career Fair", description: "Don't miss the Career Fair on September 30!" },
+];
+
+const sampleTestimonials = [
+  { id: 1, text: "AU Connect has transformed my university experience!", author: "Jane Doe" },
+  { id: 2, text: "A fantastic platform for networking and staying informed!", author: "John Smith" },
+];
+
+const sampleUpcomingEvents = [
+  { id: 1, date: "September 30", title: "Career Fair" },
+  { id: 2, date: "October 10", title: "Guest Lecture: AI in Education" },
+];
+
+const HomePage = () => {
+  const { isLoggedIn, role } = useAuth(); // Get role from AuthContext
+  const [announcements, setAnnouncements] = useState(sampleAnnouncements);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "" });
   const [coverImage, setCoverImage] = useState(null);
-  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState("newest");
-  
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(21);
-  const [isMobile, setIsMobile] = useState(false);
-  const [loadMoreCount, setLoadMoreCount] = useState(6);
-
-  // Fetch announcements from backend
-  useEffect(() => {
-    fetchAnnouncements();
-    handleResize();
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
-    let updatedAnnouncements = announcements.filter((announcement) =>
-      announcement.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    // Sort by title or date
-    if (sortOption === "title") {
-      updatedAnnouncements.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sortOption === "newest") {
-      updatedAnnouncements.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    } else if (sortOption === "oldest") {
-      updatedAnnouncements.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    }
-
-    setFilteredAnnouncements(updatedAnnouncements);
-  }, [searchTerm, sortOption, announcements]);
-
-  // Fetch announcements
-  const fetchAnnouncements = async () => {
-    try {
-      const response = await fetch("/api/announcements");
-      if (!response.ok) {
-        throw new Error("Failed to fetch announcements");
-      }
-      const data = await response.json();
-      setAnnouncements(data);
-      setFilteredAnnouncements(data);
-    } catch (error) {
-      console.error("Error fetching announcements:", error);
-      setError("Failed to load announcements. Please try again later.");
-    }
-  };
-
-  // Handle cover image change
-  const handleCoverImageChange = (e) => {
-    setCoverImage(e.target.files[0]);
-  };
+  const itemsPerPage = 3; // Change this based on how many announcements you want to show per page
 
   // Add or edit announcement (Admin Only)
   const handleSaveAnnouncement = async () => {
     setIsLoading(true);
     setError("");
 
+    // Simulate an API call
     try {
-      const formData = new FormData();
-      formData.append("title", newAnnouncement.title);
-      formData.append("content", newAnnouncement.content);
-      if (coverImage) {
-        formData.append("coverImage", coverImage);
+      if (!newAnnouncement.title || !newAnnouncement.content) {
+        throw new Error("Title and content are required!");
       }
 
-      const method = editingAnnouncement ? "PUT" : "POST";
-      const url = editingAnnouncement
-        ? `/api/announcements/edit/${editingAnnouncement._id}`
-        : "/api/announcements/create";
+      const newAnn = {
+        id: announcements.length + 1, // Simple ID generation
+        ...newAnnouncement,
+      };
 
-      const response = await fetch(url, {
-        method,
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save announcement");
-      }
-
-      const updatedAnnouncement = await response.json();
-
-      setAnnouncements((prev) => {
-        if (editingAnnouncement) {
-          return prev.map((ann) => (ann._id === updatedAnnouncement._id ? updatedAnnouncement : ann));
-        } else {
-          return [updatedAnnouncement, ...prev];
-        }
-      });
-
+      // Update state with new announcement
+      setAnnouncements((prev) => [newAnn, ...prev]);
       setNewAnnouncement({ title: "", content: "" });
       setCoverImage(null);
-      setEditingAnnouncement(null);
-      fetchAnnouncements();
     } catch (error) {
-      console.error("Error saving announcement:", error);
-      setError("Error saving announcement. Please try again.");
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Delete announcement (Admin Only)
-  const handleDeleteAnnouncement = async (id) => {
-    try {
-      await fetch(`/api/announcements/delete/${id}`, { method: "DELETE" });
-      setAnnouncements((prev) => prev.filter((ann) => ann._id !== id));
-    } catch (error) {
-      console.error("Error deleting announcement:", error);
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError("Please upload a valid image file.");
+        return;
+      }
+      // Validate file size (e.g., 2MB limit)
+      if (file.size > 2 * 1024 * 1024) {
+        setError("File size must be less than 2MB.");
+        return;
+      }
+      setCoverImage(file);
     }
-  };
-
-  // Detect mobile device
-  const handleResize = () => {
-    if (typeof window !== "undefined") {
-      setIsMobile(window.innerWidth <= 768);
-    }
-  };
-
-  // Load more for mobile
-  const handleLoadMore = () => {
-    setLoadMoreCount((prevCount) => prevCount + 6);
   };
 
   // Pagination logic
-  const totalPages = Math.max(Math.ceil(filteredAnnouncements.length / itemsPerPage), 1);
-  const indexOfLastItem = Math.min(currentPage * itemsPerPage, filteredAnnouncements.length);
-  const indexOfFirstItem = Math.max(0, indexOfLastItem - itemsPerPage);
-  const currentItems = filteredAnnouncements.slice(indexOfFirstItem, indexOfLastItem);
+  const indexOfLastAnnouncement = currentPage * itemsPerPage;
+  const indexOfFirstAnnouncement = indexOfLastAnnouncement - itemsPerPage;
+  const currentAnnouncements = announcements.slice(indexOfFirstAnnouncement, indexOfLastAnnouncement);
+  const totalPages = Math.ceil(announcements.length / itemsPerPage);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-5xl font-extrabold text-center text-gray-800 mb-8">
-        AU Connect Announcements
-      </h1>
+    <div>
+      {/* Hero Section */}
+      <section className="bg-red-600 text-white py-12">
+        <div className="container mx-auto text-center">
+          <h1 className="text-4xl font-bold">Welcome to AU Connect</h1>
+          <p className="mt-4 text-lg">Connect with your peers, join discussions, and stay updated!</p>
+          <Link href="/signup" className="mt-6 inline-block bg-white text-red-600 font-semibold py-2 px-4 rounded hover:bg-gray-200">Get Started</Link>
+        </div>
+      </section>
 
-      {/* Admin Section: Add/Edit Announcement */}
+      {/* Announcement Section for Admin */}
       {role === "admin" && (
         <div className="bg-white shadow-lg rounded-lg p-6 mb-8">
-          <h2 className="text-3xl font-semibold mb-6">
-            {editingAnnouncement ? "Edit Announcement" : "Add Announcement"}
-          </h2>
-
-          {/* Title Input */}
-          <label className="block text-xl font-medium mb-2">Title</label>
+          <h2 className="text-3xl font-semibold mb-6">Add Announcement</h2>
           <input
             type="text"
             placeholder="Title"
-            className="mb-4 p-3 border rounded w-full focus:ring focus:border-blue-300"
+            className="mb-4 p-3 border rounded w-full focus:ring focus:border-red-300"
             value={newAnnouncement.title}
             onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
           />
-
-          {/* Content Input */}
-          <label className="block text-xl font-medium mb-2">Content</label>
           <ReactQuill
             value={newAnnouncement.content}
             onChange={(content) => setNewAnnouncement({ ...newAnnouncement, content })}
             className="mb-4"
-            modules={modules} // Enable custom toolbar with image upload
+            modules={modules}
           />
-
-          {/* Cover Image Input */}
-          <label className="block text-xl font-medium mb-2">Cover Image</label>
+          {coverImage && (
+            <img
+              src={URL.createObjectURL(coverImage)}
+              alt="Cover Preview"
+              className="mb-4 w-full h-auto rounded"
+            />
+          )}
           <input
             type="file"
             accept="image/*"
-            onChange={handleCoverImageChange}
-            className="mb-4 p-3 border rounded w-full focus:ring focus:border-blue-300"
+            onChange={handleFileChange}
+            className="mb-4 p-3 border rounded w-full focus:ring focus:border-red-300"
           />
-
           <button
             onClick={handleSaveAnnouncement}
-            className={`w-full py-3 mt-4 text-xl font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow ${
-              isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`w-full py-3 mt-4 text-xl font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={isLoading}
           >
-            {editingAnnouncement ? "Update Announcement" : "Add Announcement"}
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                  <circle className="text-white" fill="none" strokeWidth="4" strokeLinecap="round" cx="12" cy="12" r="10" />
+                </svg>
+                Saving...
+              </span>
+            ) : "Add Announcement"}
           </button>
-
           {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
       )}
 
-      {/* Search Bar and Sort Dropdown */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6">
-        <input
-          type="text"
-          placeholder="Search by title..."
-          className="p-3 border rounded w-full md:w-1/3 mb-4 md:mb-0"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <select
-          className="p-3 border rounded w-full md:w-1/5"
-          value={sortOption}
-          onChange={(e) => setSortOption(e.target.value)}
-        >
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="title">Title</option>
-        </select>
-      </div>
+      {/* Featured Announcements Section */}
+      <section className="my-8">
+        <h2 className="text-2xl font-semibold mb-4">Featured Announcements</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {currentAnnouncements.map(announcement => (
+            <div key={announcement.id} className="bg-white shadow rounded p-4">
+              <h3 className="font-bold">{announcement.title}</h3>
+              <p className="text-gray-700">{announcement.description}</p>
+              <Link href={`/announcements/${announcement.id}`} className="text-red-600 hover:underline">Read More</Link>
+            </div>
+          ))}
+        </div>
+        {/* Pagination Controls */}
+        <div className="flex justify-center mt-4">
+          {Array.from({ length: totalPages }, (_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentPage(index + 1)}
+              className={`mx-1 px-3 py-1 rounded ${currentPage === index + 1 ? "bg-red-600 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"}`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      {/* Announcement Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {currentItems.map((announcement) => (
-          <div key={announcement._id} className="bg-white shadow-lg rounded-lg p-4">
-            <h3 className="text-2xl font-bold">{announcement.title}</h3>
-            {announcement.coverImage && (
-              <Image
-                src={announcement.coverImage}
-                alt={announcement.title}
-                width={500}
-                height={300}
-                className="mb-4 rounded"
-              />
-            )}
-            <div
-              className="mb-4"
-              dangerouslySetInnerHTML={{ __html: announcement.content }}
-            />
-            <p className="text-gray-500 text-sm">{new Date(announcement.createdAt).toLocaleDateString()}</p>
+      {/* Quick Links */}
+      <section className="my-8">
+        <h2 className="text-2xl font-semibold mb-4">Quick Links</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/login" className="bg-white shadow rounded p-4 text-center">
+            <h3 className="font-bold">Contact Management</h3>
+          </Link>
+          <Link href="/login" className="bg-white shadow rounded p-4 text-center">
+            <h3 className="font-bold">Email Communication</h3>
+          </Link>
+          <Link href="/login" className="bg-white shadow rounded p-4 text-center">
+            <h3 className="font-bold">Admin Dashboard</h3>
+          </Link>
+        </div>
+      </section>
 
-            {role === "admin" && (
-              <div className="flex justify-between mt-4">
-                <button
-                  onClick={() => {
-                    setEditingAnnouncement(announcement);
-                    setNewAnnouncement({ title: announcement.title, content: announcement.content });
-                  }}
-                  className="text-blue-500 hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteAnnouncement(announcement._id)}
-                  className="text-red-500 hover:underline"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      {/* Testimonials */}
+      <section className="bg-gray-200 py-8">
+        <h2 className="text-2xl font-semibold text-center mb-4">What Our Users Say</h2>
+        <div className="flex flex-wrap justify-center">
+          {sampleTestimonials.map(testimonial => (
+            <div key={testimonial.id} className="bg-white shadow rounded p-4 mx-2 my-2">
+              <p className="text-gray-700">{`"${testimonial.text}"`}</p> {/* Escaped quotes */}
+              <p className="font-semibold mt-2">- {testimonial.author}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* Load More Button */}
-      {isMobile && loadMoreCount < filteredAnnouncements.length && (
-        <button
-          onClick={handleLoadMore}
-          className="w-full py-3 text-xl font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow mb-6"
-        >
-          Load More
-        </button>
-      )}
+      {/* Upcoming Events */}
+      <section className="my-8">
+        <h2 className="text-2xl font-semibold mb-4">Upcoming Events</h2>
+        <ul className="list-disc list-inside">
+          {sampleUpcomingEvents.map(event => (
+            <li key={event.id} className="text-gray-700">{`${event.date}: ${event.title}`}</li>
+          ))}
+        </ul>
+      </section>
 
-      {/* Pagination */}
-      <div className="flex justify-center mb-4">
-        {[...Array(totalPages)].map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentPage(index + 1)}
-            className={`px-4 py-2 mx-1 text-white rounded ${currentPage === index + 1 ? "bg-blue-600" : "bg-gray-500"}`}
-          >
-            {index + 1}
-          </button>
-        ))}
-      </div>
+      {/* Contact Support */}
+      <section className="my-8">
+        <h2 className="text-2xl font-semibold mb-4">Need Help?</h2>
+        <p className="text-gray-700">Contact our support team for assistance.</p>
+        <Link href="/contact" className="text-red-600 hover:underline">Get Support</Link>
+      </section>
     </div>
   );
-}
+};
+
+export default HomePage;

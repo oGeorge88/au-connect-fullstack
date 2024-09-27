@@ -15,7 +15,6 @@ const cors = require('cors');
 const announcements = require('./routes/announcements');
 const adminProfileRoutes = require('./routes/adminProfileRoutes');
 const userProfileRoutes = require('./routes/userProfileRoutes');
-const { isAuthenticated, isAdmin } = require('./middlewares/auth');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -29,11 +28,11 @@ app.prepare().then(() => {
     server.use(morgan('dev'));
     server.use(cors({
         origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-        credentials: true, // Enable credentials to be sent with requests (cookies)
+        credentials: true,
     }));
 
     // MongoDB Connection
-    console.log('Connecting to MongoDB:', process.env.MONGODB_URI); // Log the MongoDB URI for debugging
+    console.log('Connecting to MongoDB:', process.env.MONGODB_URI);
     mongoose.connect(process.env.MONGODB_URI)
         .then(() => console.log('MongoDB Connected'))
         .catch((err) => console.error('MongoDB Connection Error:', err));
@@ -44,7 +43,12 @@ app.prepare().then(() => {
         resave: false,
         saveUninitialized: false,
         store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
-        cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000 }, // 1 day
+        cookie: { 
+            secure: process.env.NODE_ENV === 'production', 
+            maxAge: 24 * 60 * 60 * 1000, // 1 day 
+            httpOnly: true, 
+            sameSite: 'strict' 
+        },
     }));
 
     // Routes
@@ -52,8 +56,24 @@ app.prepare().then(() => {
     server.use('/api/admin', adminProfileRoutes);
     server.use('/api/user', userProfileRoutes);
 
+    // Health Check Endpoint
+    server.get('/health', (req, res) => {
+        res.status(200).send('OK');
+    });
+
     // Default handler for Next.js routes
     server.all('*', (req, res) => handle(req, res));
+
+    const shutdown = () => {
+        server.close(() => {
+            console.log('Server shutting down...');
+            mongoose.connection.close();
+            process.exit(0);
+        });
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
 
     server.listen(process.env.PORT || 3000, () => {
         console.log(`Server running on port ${process.env.PORT || 3000}`);

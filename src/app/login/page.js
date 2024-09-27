@@ -1,9 +1,9 @@
 "use client";
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../AuthContext';
 import Link from 'next/link';
+import { toast } from 'react-toastify';
 
 const LoginPage = () => {
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
@@ -16,6 +16,7 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(''); // Reset error state on new submission
 
     try {
       const response = await fetch('/api/login', {
@@ -30,18 +31,15 @@ const LoginPage = () => {
 
       if (response.ok) {
         login({ role: data.role, userId: data.userId });
-        window.alert(`Login successful! Welcome ${data.role === 'admin' ? 'Admin' : 'User'}.`);
-
-        if (data.role === 'admin') {
-          router.push('/admin/dashboard');
-        } else {
-          router.push('/');
-        }
+        toast.success('Login successful!'); // Toast notification for success
+        router.push(data.role === 'admin' ? '/admin/dashboard' : '/');
       } else {
-        setError(data.message || 'Login failed. Please check your credentials.');
+        setError('Invalid credentials. Please try again.');
+        toast.error('Invalid credentials.'); // Toast notification for error
       }
     } catch (error) {
-      setError('An error occurred while trying to log in.');
+      setError('An error occurred while trying to log in. Please try again later.');
+      toast.error('An error occurred.'); // Toast notification for error
     } finally {
       setLoading(false);
     }
@@ -52,7 +50,7 @@ const LoginPage = () => {
       <form onSubmit={handleLogin} className="max-w-sm mx-auto bg-white p-6 rounded shadow-md mt-10">
         <h2 className="text-center text-2xl font-bold mb-4">Log In</h2>
 
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        {error && <p className="text-red-500 text-center mb-4" aria-live="polite">{error}</p>}
 
         <div className="mb-4">
           <label htmlFor="usernameOrEmail" className="block text-sm font-medium text-gray-700">Username or Email</label>
@@ -80,7 +78,7 @@ const LoginPage = () => {
 
         <button
           type="submit"
-          className="w-full py-2 px-4 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 flex justify-center items-center"
+          className={`w-full py-2 px-4 ${loading ? 'bg-gray-400' : 'bg-indigo-600'} text-white font-medium rounded-md hover:bg-indigo-700 flex justify-center items-center`}
           disabled={loading}
         >
           {loading && (

@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../AuthContext";
-import ReactQuill from "react-quill";
-import Image from "next/image"; // Import the Image component
+import dynamic from 'next/dynamic';
+import Image from "next/image";
+import "react-quill/dist/quill.snow.css";
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 const modules = {
   toolbar: [
@@ -16,20 +19,13 @@ const modules = {
   ],
 };
 
-function isIE() {
-  if (typeof document !== "undefined") {
-    return document.documentMode !== undefined; // Example logic for checking IE
-  }
-  return false; // Not in browser
-}
-
 export default function HomePage() {
   const { isLoggedIn, role, userId } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "" });
   const [coverImage, setCoverImage] = useState(null);
-  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -44,6 +40,8 @@ export default function HomePage() {
     } catch (error) {
       console.error("Error fetching announcements:", error);
       setError("Failed to fetch announcements.");
+    } finally {
+      setFetchLoading(false);
     }
   };
 
@@ -53,14 +51,19 @@ export default function HomePage() {
       return;
     }
 
+    const formData = new FormData();
+    formData.append("title", newAnnouncement.title);
+    formData.append("content", newAnnouncement.content);
+    formData.append("userId", userId);
+    if (coverImage) {
+      formData.append("coverImage", coverImage);
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch("/api/announcements", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ...newAnnouncement, userId, coverImage }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -79,35 +82,31 @@ export default function HomePage() {
     }
   };
 
-  const handleChange = (field, value) => {
-    setNewAnnouncement((prev) => ({ ...prev, [field]: value }));
-  };
-
-  useEffect(() => {
-    // You can now safely use isIE here if needed
-    if (isIE()) {
-      console.log("You are using Internet Explorer.");
-    }
-  }, []);
-
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Announcements</h1>
       {error && <p className="text-red-500">{error}</p>}
-      {isLoggedIn && role === 'admin' && (
+      {isLoggedIn && role === "admin" && (
         <div className="mb-4">
           <h2 className="text-xl font-semibold">Create New Announcement</h2>
           <input
             type="text"
             placeholder="Title"
             value={newAnnouncement.title}
-            onChange={(e) => handleChange('title', e.target.value)}
+            onChange={(e) => handleChange("title", e.target.value)}
             className="border p-2 mb-2 w-full"
           />
           <ReactQuill
             value={newAnnouncement.content}
-            onChange={(content) => handleChange('content', content)}
+            onChange={(content) => handleChange("content", content)}
             modules={modules}
+            className="h-40 mb-2"
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setCoverImage(e.target.files[0])}
+            className="border p-2 mb-2 w-full"
           />
           <button
             onClick={handleCreateAnnouncement}
@@ -119,14 +118,21 @@ export default function HomePage() {
         </div>
       )}
       <h2 className="text-xl font-semibold">Current Announcements</h2>
-      {announcements.length > 0 ? (
+      {fetchLoading ? (
+        <p>Loading announcements...</p>
+      ) : announcements.length > 0 ? (
         <ul>
           {announcements.map((announcement) => (
             <li key={announcement.id} className="border-b mb-4 pb-2">
               <h3 className="text-lg font-bold">{announcement.title}</h3>
               <div dangerouslySetInnerHTML={{ __html: announcement.content }} />
               {announcement.coverImage && (
-                <Image src={announcement.coverImage} alt={announcement.title} width={600} height={400} />
+                <Image
+                  src={announcement.coverImage}
+                  alt={announcement.title}
+                  width={600}
+                  height={400}
+                />
               )}
             </li>
           ))}

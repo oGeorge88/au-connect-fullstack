@@ -9,11 +9,13 @@ const AnnouncementCard = ({ announcement }) => {
   // Toggle the 'like' state
   const toggleLike = () => {
     setIsLiked(!isLiked);
+    // Future improvement: make an API call to store the like status if needed
   };
 
   // Toggle the 'bookmark' state
   const toggleBookmark = () => {
     setIsBookmarked(!isBookmarked);
+    // Future improvement: make an API call to store the bookmark status if needed
   };
 
   return (
@@ -22,7 +24,7 @@ const AnnouncementCard = ({ announcement }) => {
       <h3 className="font-semibold text-lg text-gray-800">{announcement.title}</h3>
       
       {/* Announcement Content */}
-      <p className="mt-2 text-gray-600">{announcement.content}</p>
+      <div className="mt-2 text-gray-600" dangerouslySetInnerHTML={{ __html: announcement.content }}></div>
 
       {/* Buttons for Like and Bookmark */}
       <div className="flex justify-between items-center mt-4">
@@ -30,6 +32,7 @@ const AnnouncementCard = ({ announcement }) => {
         <button 
           onClick={toggleLike} 
           aria-label={isLiked ? 'Unlike announcement' : 'Like announcement'}
+          aria-pressed={isLiked}
           className={`text-sm transition-colors duration-300 ${isLiked ? 'text-red-500' : 'text-gray-500'}`}
         >
           {isLiked ? 'Unlike' : 'Like'}
@@ -39,6 +42,7 @@ const AnnouncementCard = ({ announcement }) => {
         <button 
           onClick={toggleBookmark} 
           aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark announcement'}
+          aria-pressed={isBookmarked}
           className={`text-sm transition-colors duration-300 ${isBookmarked ? 'text-blue-500' : 'text-gray-500'}`}
         >
           {isBookmarked ? 'Unbookmark' : 'Bookmark'}

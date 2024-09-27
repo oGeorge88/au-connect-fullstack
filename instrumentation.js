@@ -7,8 +7,20 @@ export function register() {
 
     // Override the global fetch function
     global.fetch = async (...args) => {
-        const response = await originalFetch(...args);
-        console.log('Fetch made:', args);  // Log the fetch call and its arguments
-        return response;  // Return the original response
+        try {
+            const response = await originalFetch(...args);
+            console.log('Fetch made:', args);  // Log the fetch call and its arguments
+            console.log('Response status:', response.status);  // Log the response status
+            return response;  // Return the original response
+        } catch (error) {
+            console.error('Fetch error:', error, 'with arguments:', args);
+            throw error;  // Rethrow the error to maintain original behavior
+        }
+    };
+
+    // Return a function to restore the original fetch
+    return () => {
+        global.fetch = originalFetch;
+        console.log("Restored original fetch function");
     };
 }

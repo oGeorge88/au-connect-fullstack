@@ -1,9 +1,10 @@
+require('dotenv').config(); // Load environment variables
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const User = require('./models/User');  // Adjust the path to your User model
 
 const createAdminUser = async () => {
-  await mongoose.connect('mongodb+srv://u6520283:Au6520283@cluster0.djoir.mongodb.net/mydatabase', {
+  await mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
@@ -27,4 +28,10 @@ const createAdminUser = async () => {
   console.log('Admin user created successfully');
 };
 
-createAdminUser().catch(console.error).finally(() => mongoose.connection.close());
+createAdminUser()
+  .catch((error) => {
+    console.error('Error creating admin user:', error);
+  })
+  .finally(() => {
+    mongoose.connection.close();
+  });

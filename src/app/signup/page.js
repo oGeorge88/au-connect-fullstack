@@ -10,7 +10,7 @@ const SignupPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [faculty, setFaculty] = useState('');
-  const [gender, setGender] = useState('male'); // Default to 'male' to avoid having no selection
+  const [gender, setGender] = useState('male'); // Default to 'male'
   const [studentId, setStudentId] = useState(''); // Optional field
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false); // Track loading state
@@ -21,7 +21,6 @@ const SignupPage = () => {
     setLoading(true); // Start loading when form is submitted
 
     try {
-      // Send signup request to the backend
       const response = await fetch('/api/signup', {
         method: 'POST',
         headers: {
@@ -41,12 +40,9 @@ const SignupPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Show alert message for successful signup
         window.alert('Signup successful! Please log in.');
-        // Redirect to the login page after successful signup
         router.push('/login');
       } else {
-        // Display error message from the response
         setError(data.message || 'Signup failed. Please check your input.');
       }
     } catch (error) {
@@ -113,6 +109,10 @@ const SignupPage = () => {
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
             required
           />
+          {/* Optional password strength indicator */}
+          <div className="text-sm text-gray-500 mt-1">
+            {password.length < 6 ? 'Password is too weak.' : 'Password is strong.'}
+          </div>
         </div>
 
         {/* Faculty */}

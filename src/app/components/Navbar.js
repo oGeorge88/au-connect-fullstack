@@ -1,4 +1,3 @@
-// src/app/components/Navbar.js
 "use client";
 import { useAuth } from '../AuthContext'; // Corrected import path
 import { useRouter } from 'next/navigation';
@@ -44,7 +43,11 @@ const Navbar = () => {
                 <Link href="/contact">Contact</Link>
               </li>
               <li>
-                <button onClick={handleLogout} className="hover:text-blue-300">
+                <button 
+                  onClick={handleLogout} 
+                  className="hover:text-blue-300"
+                  aria-label="Logout of your account"
+                >
                   Logout
                 </button>
               </li>

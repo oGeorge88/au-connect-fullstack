@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../AuthContext"; // Ensure AuthContext is properly set up
@@ -28,6 +29,7 @@ export default function ProfilePage() {
   const [searchQuery, setSearchQuery] = useState(""); // For search input
   const [sortCriteria, setSortCriteria] = useState("displayName"); // Default sort criteria is by Display Name
   const [sortDirection, setSortDirection] = useState("asc"); // Default sort direction is ascending
+  const [submitting, setSubmitting] = useState(false); // For managing submission state
 
   // Fetch user data based on the role (admin or regular user)
   useEffect(() => {
@@ -59,6 +61,7 @@ export default function ProfilePage() {
         setLoading(false);
       } catch (err) {
         setError("Error fetching user data");
+        console.error(err); // Log error for debugging
         setLoading(false);
       }
     };
@@ -79,6 +82,7 @@ export default function ProfilePage() {
   // Handle form submission for adding/editing a user or updating the logged-in user's profile
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true); // Set submitting state
     try {
       const formDataToSend = new FormData(); // Use FormData for file uploads
       formDataToSend.append("displayName", formData.displayName);
@@ -102,189 +106,83 @@ export default function ProfilePage() {
             user._id === editingUserId ? response.data : user
           )
         );
-        setSuccess("User updated successfully");
-      } else if (role !== "admin") {
-        // Update logged-in user's profile (user action)
-        const response = await axios.put("/api/user/profile", formDataToSend, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        setProfile(response.data);
-        setSuccess("Profile updated successfully");
-      } else if (isAddingNewUser) {
+        setSuccess("User updated successfully!");
+      } else if (role === "admin" && isAddingNewUser) {
         // Add a new user (admin action)
-        const response = await axios.post("/api/admin/users", formDataToSend, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        const response = await axios.post(
+          "/api/admin/users",
+          formDataToSend,
+          { headers: { "Content-Type": "multipart/form-data" } } // Set the correct headers
+        );
         setUsers((prevUsers) => [...prevUsers, response.data]);
-        setSuccess("User added successfully");
+        setSuccess("New user added successfully!");
+      } else {
+        // Update the logged-in user's profile
+        const response = await axios.put(
+          "/api/user/profile",
+          formDataToSend,
+          { headers: { "Content-Type": "multipart/form-data" } } // Set the correct headers
+        );
+        setProfile(response.data);
+        setSuccess("Profile updated successfully!");
       }
-
-      setFormData({
-        displayName: "",
-        username: "",
-        email: "",
-        faculty: "",
-        studentId: "",
-        gender: "",
-        password: "",
-        profilePicture: null, // Reset profile picture field
-      });
       setEditingUserId(null);
-      setIsAddingNewUser(false);
+      setIsAddingNewUser(false); // Reset the adding new user state
     } catch (err) {
-      setError(err.response?.data?.message || "Error saving user");
+      setError("Error updating user data");
+      console.error(err); // Log error for debugging
+    } finally {
+      setSubmitting(false); // Reset submitting state
     }
   };
 
-  // Admin action: handle adding a new user
-  const handleAddNewUser = () => {
-    setIsAddingNewUser(true);
-    setEditingUserId(null);
-    setFormData({
-      displayName: "",
-      username: "",
-      email: "",
-      faculty: "",
-      studentId: "",
-      gender: "",
-      password: "",
-      profilePicture: null,
-    });
-  };
-
-  // Handle search input changes
-  const handleSearchChange = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-
-    // Filter users based on search query
-    const filtered = users.filter((user) =>
-      [user.displayName, user.email, user.faculty, user.studentId]
-        .some((field) => field.toLowerCase().includes(query.toLowerCase()))
+  // Filter users based on search query
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+    const filtered = users.filter(user =>
+      user.displayName.toLowerCase().includes(e.target.value.toLowerCase())
     );
     setFilteredUsers(filtered);
   };
 
-  // Handle sorting changes
-  const handleSortChange = (criteria) => {
-    setSortCriteria(criteria);
-    const sortedUsers = [...filteredUsers].sort((a, b) => {
+  // Sort users based on criteria
+  const handleSort = (criteria) => {
+    const sorted = [...filteredUsers].sort((a, b) => {
       if (sortDirection === "asc") {
         return a[criteria] > b[criteria] ? 1 : -1;
       } else {
         return a[criteria] < b[criteria] ? 1 : -1;
       }
     });
-    setFilteredUsers(sortedUsers);
+    setFilteredUsers(sorted);
+    setSortDirection(sortDirection === "asc" ? "desc" : "asc"); // Toggle sort direction
   };
-
-  // Admin action: handle editing a user
-  const handleEditUser = (user) => {
-    setEditingUserId(user._id);
-    setIsAddingNewUser(false);
-    setFormData({
-      displayName: user.displayName,
-      username: user.username,
-      email: user.email,
-      faculty: user.faculty,
-      studentId: user.studentId,
-      gender: user.gender,
-      password: "",
-      profilePicture: null,
-    });
-  };
-
-  // Admin action: handle deleting a user
-  const handleDeleteUser = async (userId) => {
-    try {
-      await axios.delete(`/api/admin/users/${userId}`);
-      setUsers((prevUsers) => prevUsers.filter((user) => user._id !== userId));
-      setSuccess("User deleted successfully");
-    } catch (err) {
-      setError("Error deleting user");
-    }
-  };
-
-  if (loading) return <div>Loading...</div>; // Display loading message
-  if (error) return <div className="text-red-500">{error}</div>; // Display error message
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-gray-100 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">
-        {role === "admin" ? "Admin User Management" : "Your Profile"}
-      </h2>
+    <div className="container mx-auto px-4">
+      <h1 className="text-center text-2xl font-bold mt-10">{role === "admin" ? "User Management" : "Profile"}</h1>
+      {loading && <p>Loading...</p>}
+      {error && <p className="text-red-500 text-center">{error}</p>}
+      {success && <p className="text-green-500 text-center">{success}</p>}
 
-      {/* Success and Error Messages */}
-      {success && <div className="mt-4 text-green-500">{success}</div>}
-      {error && <div className="mt-4 text-red-500">{error}</div>}
-
-      {/* Profile or User Form */}
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        {/* Form Fields for User Info */}
-        <div className="mb-4">
-          <label className="block text-gray-700">Display Name:</label>
-          <input
-            type="text"
-            name="displayName"
-            value={formData.displayName}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 p-2 rounded-lg"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700">Username:</label>
-          <input
-            type="text"
-            name="username"
-            value={formData.username}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 p-2 rounded-lg"
-          />
-        </div>
-        {/* Other fields for email, faculty, etc. */}
-        {/* Profile Picture Upload */}
-        <div className="mb-4">
-          <label className="block text-gray-700">Profile Picture:</label>
-          <input
-            type="file"
-            name="profilePicture"
-            accept="image/*"
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 p-2 rounded-lg"
-          />
-        </div>
-        {/* Submit Button */}
-        <button
-          type="submit"
-          className="bg-blue-500 text-white py-2 px-4 rounded-lg"
-        >
-          {editingUserId ? "Update User" : isAddingNewUser ? "Add User" : "Update Profile"}
-        </button>
-      </form>
-
-      {/* Admin User Table (Admin Only) */}
-      {role === "admin" && (
+      {role === "admin" ? (
         <>
-          <div className="mt-4">
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="w-full border border-gray-300 p-2 rounded-lg"
-            />
-          </div>
-          <table className="mt-4 w-full border border-gray-300">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearch}
+            placeholder="Search by display name"
+            className="mt-4 p-2 border border-gray-300 rounded"
+          />
+          <table className="mt-4 w-full border border-collapse">
             <thead>
               <tr>
-                <th onClick={() => handleSortChange("displayName")}>
-                  Display Name
-                </th>
-                <th onClick={() => handleSortChange("email")}>Email</th>
-                <th onClick={() => handleSortChange("faculty")}>Faculty</th>
-                <th onClick={() => handleSortChange("studentId")}>
-                  Student ID
-                </th>
+                <th onClick={() => handleSort("displayName")} className="cursor-pointer">Display Name</th>
+                <th onClick={() => handleSort("username")} className="cursor-pointer">Username</th>
+                <th onClick={() => handleSort("email")} className="cursor-pointer">Email</th>
+                <th onClick={() => handleSort("faculty")} className="cursor-pointer">Faculty</th>
+                <th onClick={() => handleSort("studentId")} className="cursor-pointer">Student ID</th>
+                <th onClick={() => handleSort("gender")} className="cursor-pointer">Gender</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -292,34 +190,156 @@ export default function ProfilePage() {
               {filteredUsers.map((user) => (
                 <tr key={user._id}>
                   <td>{user.displayName}</td>
+                  <td>{user.username}</td>
                   <td>{user.email}</td>
                   <td>{user.faculty}</td>
                   <td>{user.studentId}</td>
+                  <td>{user.gender}</td>
                   <td>
                     <button
-                      onClick={() => handleEditUser(user)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded"
+                      onClick={() => {
+                        setEditingUserId(user._id);
+                        setFormData({
+                          displayName: user.displayName,
+                          username: user.username,
+                          email: user.email,
+                          faculty: user.faculty,
+                          studentId: user.studentId,
+                          gender: user.gender,
+                          password: "",
+                          profilePicture: null,
+                        });
+                      }}
+                      className="bg-blue-500 text-white px-2 py-1 rounded"
                     >
                       Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user._id)}
-                      className="bg-red-500 text-white px-2 py-1 rounded"
-                    >
-                      Delete
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
           <button
-            onClick={handleAddNewUser}
-            className="mt-4 bg-green-500 text-white py-2 px-4 rounded-lg"
+            onClick={() => {
+              setIsAddingNewUser(true);
+              setFormData({
+                displayName: "",
+                username: "",
+                email: "",
+                faculty: "",
+                studentId: "",
+                gender: "",
+                password: "",
+                profilePicture: null,
+              });
+            }}
+            className="mt-4 bg-green-500 text-white px-4 py-2 rounded"
           >
             Add New User
           </button>
         </>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-10">
+          <h2 className="text-lg font-bold mb-4">Profile Details</h2>
+          <div className="mb-4">
+            <label className="block">Display Name</label>
+            <input
+              type="text"
+              name="displayName"
+              value={formData.displayName}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block">Username</label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block">Faculty</label>
+            <input
+              type="text"
+              name="faculty"
+              value={formData.faculty}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block">Student ID</label>
+            <input
+              type="text"
+              name="studentId"
+              value={formData.studentId}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block">Gender</label>
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              required
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="mb-4">
+            <label className="block">Profile Picture</label>
+            <input
+              type="file"
+              name="profilePicture"
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block">Password</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Leave blank to keep current password"
+            />
+          </div>
+          <button
+            type="submit"
+            className="bg-blue-500 text-white py-2 px-4 rounded-md"
+            disabled={submitting}
+          >
+            {submitting ? "Saving..." : "Update Profile"}
+          </button>
+        </form>
       )}
     </div>
   );

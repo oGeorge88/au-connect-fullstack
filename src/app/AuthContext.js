@@ -11,19 +11,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true); // Track loading state
 
   useEffect(() => {
-    // Simulate fetching authentication state from localStorage
-    const loggedIn = localStorage.getItem('isLoggedIn');
-    const storedRole = localStorage.getItem('role');
-    const storedUserId = localStorage.getItem('userId');
+    try {
+      // Simulate fetching authentication state from localStorage
+      const loggedIn = localStorage.getItem('isLoggedIn');
+      const storedRole = localStorage.getItem('role');
+      const storedUserId = localStorage.getItem('userId');
 
-    if (loggedIn) {
-      setIsLoggedIn(true);
-      setRole(storedRole || '');
-      setUserId(storedUserId || null);
+      if (loggedIn === 'true') {
+        setIsLoggedIn(true);
+        setRole(storedRole || '');
+        setUserId(storedUserId || null);
+      }
+    } catch (error) {
+      console.error('Error accessing localStorage:', error);
+    } finally {
+      // Once the state is loaded from localStorage, stop loading
+      setLoading(false);
     }
-
-    // Once the state is loaded from localStorage, stop loading
-    setLoading(false);
   }, []);
 
   const login = ({ role, userId }) => {

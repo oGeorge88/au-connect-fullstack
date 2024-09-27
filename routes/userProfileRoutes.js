@@ -15,7 +15,25 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}_${file.originalname}`); // Include the original name
   }
 });
-const upload = multer({ storage });
+
+// File filter to allow only image uploads
+const fileFilter = (req, file, cb) => {
+  const fileTypes = /jpeg|jpg|png|gif/;
+  const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimeType = fileTypes.test(file.mimetype);
+  
+  if (extname && mimeType) {
+    cb(null, true);
+  } else {
+    cb('Error: Only image files are allowed (jpeg, jpg, png, gif)');
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // Max file size 10 MB
+});
 
 // View user profile
 router.get('/profile', isAuthenticated, async (req, res) => {
@@ -38,7 +56,7 @@ router.put('/profile', isAuthenticated, upload.single('profilePicture'), async (
     const user = await User.findById(req.session.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Check if email is being updated and is unique
+    // Check if email is being updated and ensure uniqueness
     if (email && email !== user.email) {
       const existingEmail = await User.findOne({ email });
       if (existingEmail) {
@@ -47,7 +65,7 @@ router.put('/profile', isAuthenticated, upload.single('profilePicture'), async (
       user.email = email;
     }
 
-    // Check if username is being updated and is unique
+    // Check if username is being updated and ensure uniqueness
     if (username && username !== user.username) {
       const existingUsername = await User.findOne({ username });
       if (existingUsername) {

@@ -28,6 +28,7 @@
 - Search and filter features
 - Admin capabilities for user management
 - API built with Express and secured with session-based authentication
+- Fetch instrumentation for monitoring API calls
 
 ## Technologies Used
 
@@ -91,6 +92,7 @@ NEXT_PUBLIC_ENV=development
 │   ├── app             # AuthContext and global layout setup
 │   └── styles          # Global styles (TailwindCSS)
 ├── middleware          # Auth middleware (isAuthenticated, isAdmin)
+├── instrumentation.js   # Monitoring and logging for fetch calls
 ├── .env                # Environment variables
 ├── next.config.mjs     # Next.js configuration
 ├── package.json        # Project dependencies and scripts
@@ -137,7 +139,7 @@ The backend API is built with Express and handles user authentication, announcem
 1. Run the backend server:
 
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 2. Open [http://localhost:3000](http://localhost:3000) to view the application in the browser.
